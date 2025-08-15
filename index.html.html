@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SonicMemo – ذكرياتك بصوتك</title>
+  <style>
+    :root{
+      --bg-day: linear-gradient(160deg,#e8f1ff,#dff7f1,#fff7e6);
+      --bg-evening: linear-gradient(160deg,#e8e9ff,#ffe3e3,#fff0d6);
+      --bg-night: linear-gradient(160deg,#0b1533,#122142,#1f2a3a);
+      --card: #ffffffcc;
+      --text: #1c2a2f;
+      --muted: #5b6b73;
+      --primary: #58b6a2;
+      --accent: #7cb6ff;
+      --beige: #f3efe6;
+      --danger: #e57373;
+      --shadow: 0 10px 25px rgba(0,0,0,.08);
+      --radius: 18px;
+    }
+    html,body{height:100%}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Naskh Arabic",Tahoma,Arial,sans-serif;color:var(--text);background:#eef3f6;background-attachment:fixed;background-size:cover}
+    .app{min-height:100%;display:flex;flex-direction:column}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;position:sticky;top:0;z-index:5;backdrop-filter:saturate(1.2) blur(8px);background:rgba(255,255,255,.6);border-bottom:1px solid #00000010}
+    header .title{display:flex;align-items:center;gap:12px;font-weight:700}
+    header .title .logo{width:36px;height:36px;border-radius:50%;background:conic-gradient(from 200deg,#7cb6ff,#58b6a2,#f3efe6);box-shadow:var(--shadow)}
+    header .actions{display:flex;gap:8px;align-items:center}
+    button,.chip{border:none;padding:10px 14px;border-radius:var(--radius);cursor:pointer;font-weight:600;background:#fff;box-shadow:var(--shadow);color:var(--text)}
+    button.primary{background:var(--primary);color:#fff}
+    button.ghost{background:transparent;border:1px solid #00000018}
+    button.icon{padding:10px;width:44px;height:44px;display:grid;place-items:center}
+    button:disabled{opacity:.6;cursor:not-allowed}
+    main{flex:1;display:grid;grid-template-columns:1fr;gap:16px;padding:16px;max-width:1100px;margin:0 auto}
+    @media(min-width:960px){main{grid-template-columns:380px 1fr}}
+    .card{background:var(--card);border:1px solid #0000000f;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+    .card .head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px dashed #00000014}
+    .card .body{padding:14px 16px}
+    .moods{display:flex;flex-wrap:wrap;gap:8px}
+    .chip{background:#fff;border:1px solid #00000012}
+    .chip.active{background:var(--accent);color:#0b1b2b;border-color:transparent}
+    .recorder{display:grid;gap:12px}
+    .timer{font-variant-numeric:tabular-nums;font-size:28px;font-weight:800;letter-spacing:1px}
+    .meter{height:12px;border-radius:999px;background:#00000012;overflow:hidden}
+    .meter .fill{height:100%;width:0%;background:linear-gradient(90deg,#7cb6ff,#58b6a2)}
+    .list{display:flex;flex-direction:column;gap:10px}
+    .memo{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;background:#fff;border:1px solid #0000000e;border-radius:14px;padding:10px 12px}
+    .memo .avatar{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-size:20px;background:var(--beige)}
+    .memo .meta{display:flex;flex-direction:column;gap:6px}
+    .memo .meta .top{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .tag{padding:4px 8px;border-radius:999px;font-size:12px;background:#eef6ff;border:1px solid #00000010}
+    audio{width:100%}
+    .flash{display:flex;flex-direction:column;gap:10px}
+    .flash .info{font-size:13px;color:var(--muted)}
+    .empty{padding:24px;text-align:center;color:var(--muted)}
+    .lock-screen{position:fixed;inset:0;display:none;place-items:center;backdrop-filter:blur(8px) saturate(1.2);background:#00000055}
+    .lock-box{background:#fff;border-radius:var(--radius);padding:18px;width:min(92vw,420px);box-shadow:var(--shadow);border:1px solid #00000018}
+    .pin-input{display:flex;gap:10px;justify-content:center;margin:8px 0 16px}
+    .pin-input input{width:46px;height:52px;font-size:24px;text-align:center;border:1px solid #00000024;border-radius:10px}
+    .zen-toggle{display:flex;align-items:center;gap:10px}
+    .switch{position:relative;width:54px;height:30px;background:#00000022;border-radius:999px}
+    .switch::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;background:#fff;border-radius:50%;transition:.2s}
+    .switch.on{background:var(--primary)}
+    .switch.on::after{left:27px}
+    .footer{padding:20px;text-align:center;color:#6b7a7f;font-size:13px}
+    .bg{position:fixed;inset:0;z-index:-1}
+    .bg .layer{position:absolute;inset:0;transition:opacity .8s ease}
+    .layer.day{background:var(--bg-day)}
+    .layer.evening{background:var(--bg-evening);opacity:0}
+    .layer.night{background:var(--bg-night);opacity:0}
+  </style>
+</head>
+<body>
+  <div class="bg" aria-hidden="true">
+    <div class="layer day"></div>
+    <div class="layer evening"></div>
+    <div class="layer night"></div>
+  </div>
+  <div class="app">
+    <header>
+      <div class="title">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <div style="font-size:18px;">SonicMemo</div>
+          <div style="font-size:12px;color:var(--muted)">ذكرياتك بصوتك</div>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="btnLock" class="icon" title="قفل التطبيق" aria-label="قفل التطبيق">🔒</button>
+        <button id="btnExport" class="ghost" title="نسخة احتياطية">📤 تصدير</button>
+        <button id="btnImport" class="ghost" title="استيراد">📥 استيراد</button>
+      </div>
+    </header>
+    <main>
+      <section class="card" aria-label="تسجيل سريع">
+        <div class="head"><strong>تسجيل سريع</strong><span style="font-size:12px;color:var(--muted)">15–60 ثانية</span></div>
+        <div class="body recorder">
+          <div class="moods" id="moodChips" aria-label="اختر شعورك"></div>
+          <label for="dur">المدة: <span id="durLabel">30</span> ثانية</label>
+          <input id="dur" type="range" min="15" max="60" value="30" />
+          <div class="timer" id="timer">00:00</div>
+          <div class="meter"><div class="fill" id="meterFill"></div></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button id="btnRecord" class="primary">⏺️ ابدأ التسجيل</button>
+            <button id="btnStop" disabled>⏹️ إيقاف</button>
+            <button id="btnPlay" disabled>▶️ معاينة</button>
+          </div>
+          <audio id="preview" controls style="display:none"></audio>
+          <label for="comment">تعليق بسيط (اختياري)</label>
+          <input id="comment" type="text" placeholder="اكتب كلمات تعبّر عن شعورك" style="padding:12px;border:1px solid #00000024;border-radius:12px;width:100%" />
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <button id="btnSave" disabled class="primary">💾 حفظ في الألبوم</button>
+            <span id="aiMood" class="tag" title="تحليل المزاج بالذكاء الاصطناعي" style="display:none"></span>
+          </div>
+        </div>
+      </section>
+      <section class="card" aria-label="الألبوم الزمني">
+        <div class="head">
+          <strong>الألبوم الزمني</strong>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="search" type="search" placeholder="بحث بالتعليقات أو المشاعر" style="padding:10px;border:1px solid #00000024;border-radius:12px" />
+            <select id="filterMood" style="padding:10px;border:1px solid #00000024;border-radius:12px"><option value="">كل المشاعر</option></select>
+            <label class="zen-toggle">
+              <div>وضع هدوء</div>
+              <div id="zenSwitch" class="switch" role="switch" aria-checked="false" tabindex="0"></div>
+            </label>
+          </div>
+        </div>
+        <div class="body">
+          <div id="timeline" class="list"></div>
+          <div id="emptyTimeline" class="empty">لا توجد ذكريات بعد. ابدأ بتسجيل أول لحظة لك ✨</div>
+        </div>
+      </section>
+      <section class="card" aria-label="ذكّرني بذكرياتي">
+        <div class="head"><strong>ذكّرني بذكرياتي</strong><button id="btnFlash" class="ghost">🔁 عرض ذكرى عشوائية</button></div>
+        <div class="body flash">
+          <div class="info">يعرض لك تسجيلاً قديماً بشكل عشوائي، أو تسجيلات "في مثل هذا اليوم" إن وُجدت.</div>
+          <div id="flashBox" class="empty">—</div>
+        </div>
+      </section>
+    </main>
+    <div class="footer">محفوظ محلياً على جهازك • خصوصيتك أولاً • الإصدار التجريبي</div>
+  </div>
+  <div id="lock" class="lock-screen" role="dialog" aria-modal="true">
+    <div class="lock-box">
+      <div style="font-weight:800;font-size:18px;margin-bottom:6px">قفل التطبيق</div>
+      <div id="lockMsg" style="color:var(--muted);font-size:13px">عيّن رمز مرور مكوّن من 4 أرقام أو أدخله للفتح.</div>
+      <div class="pin-input" id="pinInputs"></div>
+      <div style="display:flex;gap:8px;justify-content:center">
+        <button id="setPin" class="primary">تأكيد</button>
+        <button id="clearPin" class="ghost">مسح الرمز المحفوظ</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    const $=s=>document.querySelector(s);const $$=s=>Array.from(document.querySelectorAll(s));
+    const formatTime=s=>{const m=Math.floor(s/60).toString().padStart(2,'0');const ss=Math.floor(s%60).toString().padStart(2,'0');return `${m}:${ss}`}
+    function updateBackground(){const h=new Date().getHours();const day=$('.layer.day'),eve=$('.layer.evening'),night=$('.layer.night');day.style.opacity=(h>=7&&h<17)?1:0;eve.style.opacity=(h>=17&&h<20)?1:0;night.style.opacity=(h>=20||h<7)?1:0}
+    updateBackground();setInterval(updateBackground,10000)
+    const DB_NAME='sonicmemo-db';const DB_VER=1;let db
+    function openDB(){return new Promise((res,rej)=>{if(!('indexedDB'in window)){rej(new Error('no-idb'));return}const req=indexedDB.open(DB_NAME,DB_VER);req.onupgradeneeded=()=>{const d=req.result;if(!d.objectStoreNames.contains('memos')){const store=d.createObjectStore('memos',{keyPath:'id'});store.createIndex('by_date','date');store.createIndex('by_fav','favorite')}if(!d.objectStoreNames.contains('settings')){d.createObjectStore('settings',{keyPath:'key'})}};req.onsuccess=()=>{db=req.result;res(db)};req.onerror=e=>rej(e)})}
+    function tx(store,mode='readonly'){return db.transaction(store,mode).objectStore(store)}
+    const Settings={async get(key){return new Promise((res,rej)=>{const r=tx('settings').get(key);r.onsuccess=()=>res(r.result?r.result.value:undefined);r.onerror=rej})},async set(key,value){return new Promise((res,rej)=>{const r=tx('settings','readwrite').put({key,value});r.onsuccess=()=>res();r.onerror=rej})},async del(key){return new Promise((res,rej)=>{const r=tx('settings','readwrite').delete(key);r.onsuccess=()=>res();r.onerror=rej})}}
+    const Memos={async add(m){return new Promise((res,rej)=>{const r=tx('memos','readwrite').add(m);r.onsuccess=()=>res();r.onerror=rej})},async all(){return new Promise((res,rej)=>{const r=tx('memos').getAll();r.onsuccess=()=>res(r.result.sort((a,b)=>b.date-a.date));r.onerror=rej})},async put(m){return new Promise((res,rej)=>{const r=tx('memos','readwrite').put(m);r.onsuccess=()=>res();r.onerror=rej})},async del(id){return new Promise((res,rej)=>{const r=tx('memos','readwrite').delete(id);r.onsuccess=()=>res();r.onerror=rej})}}
+    const MOODS=[{k:'سعيد',emoji:'😊'},{k:'حزين',emoji:'😔'},{k:'متوتر',emoji:'😣'},{k:'ممتن',emoji:'🙏'},{k:'هادئ',emoji:'😌'},{k:'متحمس',emoji:'🤩'},{k:'غاضب',emoji:'😡'},{k:'مرهق',emoji:'🥱'}]
+    let selectedMood=MOODS[0].k;let mediaRec,chunks=[],stream,analyser,audioCtx,source;let recSeconds=0,recMax=30,recInterval;let rmsHistory=[],zcrHistory=[];let previewBlob=null,previewUrl=null,previewDur=0;let zenOn=false,ambient
+    const chips=$('#moodChips');MOODS.forEach((m,i)=>{const b=document.createElement('button');b.className='chip'+(i===0?' active':'');b.textContent=`${m.emoji} ${m.k}`;b.onclick=()=>{$$('.chip').forEach(c=>c.classList.remove('active'));b.classList.add('active');selectedMood=m.k;renderTimeline()};chips.appendChild(b)})
+    const filterSel=$('#filterMood');filterSel.innerHTML='<option value="">كل المشاعر</option>'+MOODS.map(m=>`<option>${m.k}</option>`).join('')
+    $('#dur').addEventListener('input',e=>{recMax=parseInt(e.target.value,10);$('#durLabel').textContent=recMax})
+    function createMediaRecorder(strm){const cand=['audio/webm;codecs=opus','audio/webm','audio/mp4;codecs=mp4a.40.2','audio/mp4',''];for(const t of cand){if(typeof MediaRecorder!=='undefined'){if(!t||MediaRecorder.isTypeSupported?.(t)){try{return t?new MediaRecorder(strm,{mimeType:t}):new MediaRecorder(strm)}catch(_){}}}}if(typeof MediaRecorder!=='undefined'){try{return new MediaRecorder(strm)}catch(_){}}throw new Error('MediaRecorder not supported')}
+    $('#btnRecord').onclick=async()=>{
+      if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){alert('المتصفح لا يدعم تسجيل الصوت.');return}
+      if(!window.isSecureContext&&location.hostname!=='localhost'){alert('يجب فتح الصفحة عبر HTTPS أو محلياً للسماح بالميكروفون.');return}
+      try{stream=await navigator.mediaDevices.getUserMedia({audio:true})}catch(e){alert('يتعذر الوصول للميكروفون. الرجاء السماح بالوصول من إعدادات المتصفح.');return}
+      try{audioCtx=new (window.AudioContext||window.webkitAudioContext)();await audioCtx.resume();source=audioCtx.createMediaStreamSource(stream);analyser=audioCtx.createAnalyser();analyser.fftSize=2048;source.connect(analyser)}catch(_){alert('حدث خطأ في تهيئة الصوت.');try{stream.getTracks().forEach(t=>t.stop())}catch(__){}return}
+      try{mediaRec=createMediaRecorder(stream)}catch(_){alert('التسجيل غير مدعوم على هذا المتصفح.');try{stream.getTracks().forEach(t=>t.stop())}catch(__){}return}
+      chunks=[];rmsHistory=[];zcrHistory=[];recSeconds=0
+      mediaRec.ondataavailable=e=>{if(e.data&&e.data.size>0)chunks.push(e.data)}
+      mediaRec.onerror=e=>{alert('حدث خطأ في التسجيل');stopRec()}
+      mediaRec.onstart=()=>{$('#timer').textContent='00:00'}
+      mediaRec.onstop=async()=>{const outType=(mediaRec&&mediaRec.mimeType)||((chunks[0]&&chunks[0].type)||'audio/webm');previewBlob=new Blob(chunks,{type:outType});if(previewUrl)URL.revokeObjectURL(previewUrl);previewUrl=URL.createObjectURL(previewBlob);const audioEl=$('#preview');audioEl.src=previewUrl;audioEl.style.display='block';try{await audioEl.play()}catch(_){ }audioEl.pause();audioEl.onloadedmetadata=()=>{previewDur=audioEl.duration||recSeconds};$('#btnPlay').disabled=false;$('#btnSave').disabled=false;const mood=inferMood();showAIMood(mood)}
+      mediaRec.start(1000);$('#btnRecord').disabled=true;$('#btnStop').disabled=false;$('#btnPlay').disabled=true;$('#btnSave').disabled=true;$('#aiMood').style.display='none'
+      const dataF=new Float32Array(analyser.fftSize);const dataB=new Uint8Array(analyser.fftSize);clearInterval(recInterval);recInterval=setInterval(()=>{let arr;let f=false;if(analyser.getFloatTimeDomainData){analyser.getFloatTimeDomainData(dataF);arr=dataF;f=true}else{analyser.getByteTimeDomainData(dataB);arr=dataB}let sum=0,zc=0;for(let i=1;i<arr.length;i++){const pv=f?arr[i-1]:(arr[i-1]-128)/128;const v=f?arr[i]:(arr[i]-128)/128;sum+=v*v;if((pv>=0&&v<0)||(pv<0&&v>=0))zc++}const rms=Math.sqrt(sum/arr.length);const zcr=zc/arr.length;rmsHistory.push(rms);zcrHistory.push(zcr);const level=Math.min(100,Math.floor(rms*9000));$('#meterFill').style.width=level+'%';recSeconds+=0.1;$('#timer').textContent=formatTime(recSeconds);if(recSeconds>=recMax){stopRec()}},100)
+    }
+    function stopRec(){if(mediaRec&&mediaRec.state!=='inactive'){try{mediaRec.stop()}catch(_){}}if(stream){try{stream.getTracks().forEach(t=>t.stop())}catch(_){}}clearInterval(recInterval);$('#btnRecord').disabled=false;$('#btnStop').disabled=true;if(audioCtx){try{audioCtx.close()}catch(_){}audioCtx=null;analyser=null;source=null}}
+    $('#btnStop').onclick=stopRec;$('#btnPlay').onclick=()=>{$('#preview').play()}
+    function inferMood(){const avg=a=>a.reduce((x,y)=>x+y,0)/Math.max(1,a.length);const rms=avg(rmsHistory);const zcr=avg(zcrHistory);let label='هادئ',msg='خذ نفساً عميقاً، وتذكّر أن الهدوء قوة.';if(rms>0.04&&zcr>0.03){label='متحمس';msg='حماسك مُلهم! استثمره في شيء تحبه اليوم.'}if(rms>0.02&&zcr>0.06){label='متوتر';msg='ربما تحتاج لاستراحة قصيرة وشربة ماء.'}if(rms>0.055&&zcr>0.05){label='غاضب';msg='لا بأس أن تغضب، جرب المشي لدقائق ثم عد للموضوع.'}if(rms<0.015&&zcr<0.025){label='حزين';msg='أنت لست وحدك. رسالة صغيرة لشخص تحبه قد تُخفّف عنك.'}if(rms<0.012&&zcr<0.02){label='مرهق';msg='نم باكراً الليلة، جسدك يقول شكراً.'}if(rms>0.03&&zcr<0.03){label='سعيد';msg='ابتسامتك مسموعة! احتفل بلحظة صغيرة.'}return {label,msg,rms:+rms.toFixed(3),zcr:+zcr.toFixed(3)}}
+    function showAIMood(m){const el=$('#aiMood');el.style.display='inline-block';el.textContent=`🧠 مزاج مقترح: ${m.label} • RMS ${m.rms} • ZCR ${m.zcr}`;el.title=m.msg}
+    $('#btnSave').onclick=async()=>{if(!previewBlob){alert('سجّل مقطعاً أولاً.');return}const id=(crypto&&crypto.randomUUID)?crypto.randomUUID():('id-'+Date.now());const comment=$('#comment').value.trim();const now=Date.now();const ai=inferMood();const memo={id,date:now,duration:previewDur||recSeconds,moodUser:selectedMood,moodAI:ai.label,comment,favorite:false};await Memos.add({...memo,blob:previewBlob});$('#comment').value='';$('#preview').style.display='none';$('#btnSave').disabled=true;$('#btnPlay').disabled=true;renderTimeline()}
+    async function renderTimeline(){const list=await Memos.all();const q=$('#search').value.trim();const fm=$('#filterMood').value;const filtered=list.filter(m=>{const hitQ=!q||((m.comment||'').includes(q))||m.moodUser.includes(q)||m.moodAI.includes(q);const hitM=!fm||m.moodUser===fm||m.moodAI===fm;return hitQ&&hitM});const wrap=$('#timeline');wrap.innerHTML='';$('#emptyTimeline').style.display=filtered.length?'none':'block';for(const m of filtered){wrap.appendChild(renderMemoItem(m))}updateFlash(list)}
+    function renderMemoItem(m){const el=document.createElement('div');el.className='memo';const moodEmoji=(MOODS.find(x=>x.k===m.moodUser)||MOODS[0]).emoji;const d=new Date(m.date);el.innerHTML=`
+      <div class="avatar" title="${moodEmoji} ${m.moodUser}">${moodEmoji}</div>
+      <div class="meta">
+        <div class="top">
+          <strong>${d.toLocaleDateString('ar-EG',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</strong>
+          <span class="tag">${moodEmoji} ${m.moodUser}</span>
+          <span class="tag">🧠 ${m.moodAI}</span>
+          <span class="tag">⏱️ ${Math.round(m.duration)} ث</span>
+          ${m.favorite?'<span class="tag">⭐ مفضلة</span>':''}
+        </div>
+        <div style="font-size:14px;color:var(--muted)">${m.comment?m.comment:'— بدون تعليق —'}</div>
+        <audio controls preload="metadata"></audio>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+          <button class="ghost act-play">▶️ تشغيل</button>
+          <button class="ghost act-share">📤 مشاركة</button>
+          <button class="ghost act-fav">${m.favorite?'⭐ إزالة من المفضلة':'⭐ إضافة للمفضلة'}</button>
+          <button class="ghost act-del" style="color:var(--danger)">🗑️ حذف</button>
+        </div>
+      </div>`; (async()=>{const rec=await new Promise((res,rej)=>{const r=tx('memos').get(m.id);r.onsuccess=()=>res(r.result);r.onerror=rej});if(rec&&rec.blob){const url=URL.createObjectURL(rec.blob);const au=el.querySelector('audio');au.src=url;au.onloadeddata=()=>{URL.revokeObjectURL(url)};au.onended=()=>{try{URL.revokeObjectURL(url)}catch(_){}}}})();
+      el.querySelector('.act-play').onclick=()=>{el.querySelector('audio').play()};
+      el.querySelector('.act-fav').onclick=async()=>{m.favorite=!m.favorite;await Memos.put(m);renderTimeline()};
+      el.querySelector('.act-del').onclick=async()=>{if(confirm('حذف هذه الذكرى نهائياً؟')){await Memos.del(m.id);renderTimeline()}};
+      el.querySelector('.act-share').onclick=async()=>{const rec=await new Promise((res,rej)=>{const r=tx('memos').get(m.id);r.onsuccess=()=>res(r.result);r.onerror=rej});if(!rec||!rec.blob){alert('تعذر العثور على الملف.');return}const type=rec.blob.type||'audio/webm';const ext=type.includes('mp4')?'m4a':'webm';const file=new File([rec.blob],`SonicMemo-${new Date(m.date).toISOString().slice(0,10)}.${ext}`,{type});const text=`ذكرياتي: ${m.comment||m.moodUser} • ${Math.round(m.duration)}ث`;if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({title:'SonicMemo',text,files:[file]})}catch(_){}}else{const url=URL.createObjectURL(rec.blob);const a=document.createElement('a');a.href=url;a.download=file.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>{try{URL.revokeObjectURL(url)}catch(_){ }},2000);alert('تم تنزيل الملف لمشاركته يدوياً.')}};return el}
+    $('#search').oninput=renderTimeline;$('#filterMood').onchange=renderTimeline
+    function updateFlash(all){const box=$('#flashBox');if(!all.length){box.textContent='—';return}const today=new Date();const sameDay=all.filter(m=>{const d=new Date(m.date);return d.getDate()===today.getDate()&&d.getMonth()===today.getMonth()});const src=(sameDay.length?sameDay:all);const pick=src[Math.floor(Math.random()*src.length)];box.innerHTML='';box.appendChild(renderMemoItem(pick))}
+    $('#btnFlash').onclick=async()=>{updateFlash(await Memos.all())}
+    function setZen(on){zenOn=on;const sw=$('#zenSwitch');sw.classList.toggle('on',on);sw.setAttribute('aria-checked',on?'true':'false');if(on){const ctx=new (window.AudioContext||window.webkitAudioContext)();const o=ctx.createOscillator();const g=ctx.createGain();o.type='sine';o.frequency.value=220;g.gain.value=0.005;o.connect(g).connect(ctx.destination);o.start();ambient={ctx,o,g}}else if(ambient){try{ambient.o.stop()}catch(_){ }try{ambient.ctx.close()}catch(_){ }ambient=null}Settings.set('zen',on)}
+    $('#zenSwitch').onclick=()=>setZen(!zenOn);$('#zenSwitch').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setZen(!zenOn)}}
+    async function exportAll(){const memos=await Memos.all();const withB64=[];for(const m of memos){const rec=await new Promise((res,rej)=>{const r=tx('memos').get(m.id);r.onsuccess=()=>res(r.result);r.onerror=rej});if(!rec||!rec.blob)continue;const b64=await new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.readAsDataURL(rec.blob)});const {blob,...rest}=rec;withB64.push({...rest,audioB64:b64})}const data={version:1,exportedAt:Date.now(),memos:withB64};const blob=new Blob([JSON.stringify(data)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='SonicMemo-backup.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>{try{URL.revokeObjectURL(url)}catch(_){ }},2000)}
+    $('#btnExport').onclick=exportAll
+    $('#btnImport').onclick=()=>{const inp=document.createElement('input');inp.type='file';inp.accept='application/json';inp.onchange=async()=>{const file=inp.files&&inp.files[0];if(!file)return;const txt=await file.text();try{const data=JSON.parse(txt);if(!data.memos)throw new Error();for(const m of data.memos){const b64=m.audioB64||'';const bin=atob(b64);const arr=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);const blob=new Blob([arr],{type:'audio/webm'});const id=m.id||('id-'+Date.now()+Math.random());await Memos.put({...m,id,blob})}renderTimeline();alert('تم الاستيراد بنجاح')}catch(_){alert('ملف غير صالح')}};inp.click()}
+    const lockEl=$('#lock');const pinBox=$('#pinInputs')
+    function buildPinInputs(){pinBox.innerHTML='';for(let i=0;i<4;i++){const inp=document.createElement('input');inp.type='password';inp.inputMode='numeric';inp.maxLength=1;inp.pattern='[0-9]';inp.oninput=()=>{if(inp.value.length===1&&i<3)pinBox.children[i+1].focus()};pinBox.appendChild(inp)}if(pinBox.firstChild)pinBox.firstChild.focus()}
+    function getPinEntered(){return Array.from(pinBox.querySelectorAll('input')).map(i=>i.value).join('')}
+    async function showLock(setup=false){buildPinInputs();lockEl.style.display='grid';$('#lockMsg').textContent=setup?'عيّن رمز مرور من 4 أرقام.':'أدخل رمز المرور لفتح التطبيق.';return new Promise(res=>{$('#setPin').onclick=async()=>{const pin=getPinEntered();if(pin.length!==4){alert('أدخل 4 أرقام');return}if(setup){await Settings.set('pin',pin);lockEl.style.display='none';res(true)}else{const saved=await Settings.get('pin');if(pin===saved){lockEl.style.display='none';res(true)}else{alert('رمز غير صحيح')}}};$('#clearPin').onclick=async()=>{await Settings.del('pin');alert('تم مسح الرمز.');lockEl.style.display='none';res(true)}})}
+    $('#btnLock').onclick=async()=>{await showLock(false)}
+    (async()=>{try{await openDB()}catch(_){alert('المتصفح لا يدعم قاعدة البيانات المحلية.');return}renderTimeline();const zenSaved=await Settings.get('zen');setZen(!!zenSaved);const hasPin=await Settings.get('pin');if(!hasPin){await showLock(true)}})()
+  </script>
+</body>
+</html>
